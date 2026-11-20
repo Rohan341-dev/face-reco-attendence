@@ -40,7 +40,7 @@ def test_pair_auth_and_device_scoped_attendance(auth, onboard):
     device = _device_client(paired["token"], paired["id"])
     current = device.get("/api/devices/current/")
     assert current.status_code == 200, current.data
-    assert current.data["id"] == paired["id"]
+    assert str(current.data["id"]) == str(paired["id"])
 
     listing = client.get("/api/devices/")
     assert len(listing.data) == 1
@@ -63,7 +63,7 @@ def test_pair_auth_and_device_scoped_attendance(auth, onboard):
     )
     assert event.status_code == 201, event.data
     assert event.data["source"] == "terminal"
-    assert event.data["device"] == paired["id"]
+    assert str(event.data["device"]) == str(paired["id"])
 
     _, _, other = onboard("Globex", "globex", "owner@globex.test")
     assert other.get("/api/devices/").data == []
