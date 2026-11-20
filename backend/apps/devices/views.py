@@ -114,7 +114,7 @@ class DeviceDeactivateView(ContractAPIView):
 class DeviceAuthView(ContractAPIView):
     serializer_class = DeviceAuthResponseSerializer
     permission_classes = [AllowAny]
-    authentication_classes = []
+    authentication_classes: list = []
 
     @extend_schema(request=DeviceAuthSerializer)
     def post(self, request):  # noqa: ANN001, ANN201

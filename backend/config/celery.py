@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import os
 
-from celery import Celery
+from celery import Celery, Task
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.prod")
 
@@ -20,7 +20,7 @@ app.autodiscover_tasks()
 TENANT_KWARGS = ("organization_id", "user_id", "device_id", "platform_admin")
 
 
-class TenantTask(app.Task):
+class TenantTask(Task):
     """Base task that scopes every DB query to the caller's tenant."""
 
     abstract = True
