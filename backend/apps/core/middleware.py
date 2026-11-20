@@ -72,10 +72,12 @@ class TenantContextMiddleware:
 
             org_id = self._resolve_org(request, user, claims)
             request.organization_id = org_id
+            request.device_id = claims.get("device_id")
             if org_id:
                 set_tenant(org_id)
             else:
                 set_tenant(None)
+            set_guc(DEVICE_GUC, request.device_id)
 
             return self.get_response(request)
 
