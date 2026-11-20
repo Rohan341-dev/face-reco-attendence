@@ -101,11 +101,13 @@ class TenantContextMiddleware:
 
             payload = decode_device_token(parts[1])
             if payload:
-                # Pin the tenant before querying the RLS-protected device table.
-                set_tenant(payload["org_id"])
-                device = Device.objects.filter(
-                    pk=payload["device_id"], organization_id=payload["org_id"], is_active=True
-                ).first()
+                # SET LOCAL needs a transaction; pin the tenant before the
+                # RLS-protected device lookup, then carry the claims onward.
+                with transaction.atomic():
+                    set_tenant(payload["org_id"])
+                    device = Device.objects.filter(
+                        pk=payload["device_id"], organization_id=payload["org_id"], is_active=True
+                    ).first()
                 if device:
                     return DevicePrincipal(device), payload
         return None, {}

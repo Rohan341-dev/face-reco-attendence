@@ -8,7 +8,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from apps.core.api import ContractAPIView
-from apps.core.audit import client_ip, log_action
+from apps.core.audit import log_action
 from apps.core.exceptions import error_response
 from apps.core.middleware import set_guc
 from apps.core.permissions import IsActiveDevice, IsTenantAdmin, IsTenantHR, IsTenantMember
@@ -131,8 +131,8 @@ class DeviceAuthView(ContractAPIView):
                 log_action(
                     "login_failed",
                     object_repr="device-token",
-                    ip_address=client_ip(request),
                     actor_label="device",
+                    request=request,
                 )
         if device is None:
             return error_response("Invalid device token.", 401, "invalid_device_token")
