@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import date, datetime, time, timedelta, timezone as dt_timezone
+from datetime import UTC, date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 from asgiref.sync import async_to_sync
@@ -19,8 +19,8 @@ from channels.layers import get_channel_layer
 from django.db import transaction
 from django.db.models import Q
 
-from apps.core.audit import log_action
 from apps.attendance.models import AttendanceEvent, AttendanceRecord, CorrectionRecord, MissingCheckoutAlert
+from apps.core.audit import log_action
 from apps.people.models import Person, has_active_consent
 from apps.schedules.models import Holiday, LeaveRequest, WorkSchedule
 from apps.tenants.models import Organization, OrganizationSettings
@@ -36,11 +36,11 @@ class AttendanceError(Exception):
         self.message = message
 
 
-class DuplicateEvent(AttendanceError):
+class DuplicateEvent(AttendanceError):  # noqa: N818
     code = "duplicate_event"
 
 
-class IneligibleEvent(AttendanceError):
+class IneligibleEvent(AttendanceError):  # noqa: N818
     code = "ineligible_event"
 
 
@@ -283,7 +283,7 @@ def recompute_daily_record(org_id: str, person_id: str, on_date: date) -> Attend
     # Overnight shifts: a check-in shortly after midnight belongs to the
     # previous day's shift window (example: 22:00-06:00).
     if shift and shift.is_overnight:
-        midnight_utc = datetime.combine(on_date, time(0, 0), tzinfo=tz).astimezone(dt_timezone.utc)
+        midnight_utc = datetime.combine(on_date, time(0, 0), tzinfo=tz).astimezone(UTC)
         cross = AttendanceEvent.objects.filter(
             organization_id=org_id,
             person_id=person_id,

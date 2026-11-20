@@ -9,7 +9,7 @@ from django.db import connection
 from django.utils import timezone
 
 from apps.attendance.engine import EventInput, IneligibleEvent, process_event
-from apps.attendance.models import AttendanceEvent, AttendanceRecord, CorrectionRecord, MissingCheckoutAlert
+from apps.attendance.models import AttendanceEvent, CorrectionRecord
 from apps.core.models import AuditLog
 from tests.conftest import tenant_ctx
 

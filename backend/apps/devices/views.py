@@ -14,7 +14,6 @@ from apps.core.middleware import set_guc
 from apps.core.permissions import IsActiveDevice, IsTenantAdmin, IsTenantHR, IsTenantMember
 from apps.core.rls import PLATFORM_GUC
 
-from .authentication import DevicePrincipal
 from .models import Device, DeviceSyncCursor
 from .serializers import (
     DeviceAuthResponseSerializer,
