@@ -122,14 +122,19 @@ class DeviceAuthView(ContractAPIView):
         payload = DeviceAuthSerializer(data=request.data)
         payload.is_valid(raise_exception=True)
         token_hash = Device.hash_token(payload.validated_data["token"])
-        device = Device.objects.filter(token_hash=token_hash, is_active=True).first()
+        # Token exchange is the one pre-tenant lookup: it runs under the
+        # audited platform scope because no org context exists yet.
+        with transaction.atomic():
+            set_guc(PLATFORM_GUC, "on")
+            device = Device.objects.filter(token_hash=token_hash, is_active=True).first()
+            if device is None:
+                log_action(
+                    "login_failed",
+                    object_repr="device-token",
+                    ip_address=client_ip(request),
+                    actor_label="device",
+                )
         if device is None:
-            log_action(
-                "login_failed",
-                object_repr="device-token",
-                ip_address=client_ip(request),
-                actor_label="device",
-            )
             return error_response("Invalid device token.", 401, "invalid_device_token")
         return Response(
             {
