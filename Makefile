@@ -34,7 +34,7 @@ db-down: ## Stop dev services
 	fi
 
 migrate: ## Apply backend migrations
-	cd backend && ../.venv/bin/python manage.py migrate 2>/dev/null || (cd backend && $(PY) manage.py migrate)
+	cd backend && $(PY) manage.py migrate
 
 run-backend: ## Run Django dev server
 	cd backend && $(PY) manage.py runserver 0.0.0.0:8000
