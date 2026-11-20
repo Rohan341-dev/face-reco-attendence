@@ -221,14 +221,16 @@ def recompute_daily_record(org_id: str, person_id: str, on_date: date) -> Attend
             occurred_at__date=on_date,
         ).order_by("occurred_at")
     )
-    # Overnight shifts: a check-in just after midnight belongs to the prior day's shift.
+    # Overnight shifts: a check-in shortly after midnight belongs to the
+    # previous day's shift window (example: 22:00-06:00).
     if shift and shift.is_overnight:
+        midnight_utc = datetime.combine(on_date, time(0, 0), tzinfo=tz).astimezone(dt_timezone.utc)
         cross = AttendanceEvent.objects.filter(
             organization_id=org_id,
             person_id=person_id,
-            occurred_at__date=on_date - timedelta(days=1),
             event_type=AttendanceEvent.EventType.CHECK_IN,
-            occurred_at__gte=datetime.combine(on_date, time(0, 0), tzinfo=dt_timezone.utc) - timedelta(hours=6),
+            occurred_at__gte=midnight_utc - timedelta(hours=12),
+            occurred_at__lt=midnight_utc,
         )
         events = sorted([*cross, *events], key=lambda e: e.occurred_at)
 
