@@ -119,9 +119,9 @@ def test_daily_record_work_time_break_and_missing_checkout(auth, onboard):
     assert record["flags"].get("missing_checkout") is True
 
     alerts = client.get("/api/attendance/missing-checkouts/?resolved=false").data
-    assert any(a["person"] == person_id for a in alerts)
+    assert any(str(a["person"]) == person_id for a in alerts)
 
-    alert_id = next(a["id"] for a in alerts if a["person"] == person_id)
+    alert_id = next(a["id"] for a in alerts if str(a["person"]) == person_id)
     resolved = client.post(f"/api/attendance/missing-checkouts/{alert_id}/resolve/", {}, format="json")
     assert resolved.status_code == 200 and resolved.data["resolved_at"] is not None
 
@@ -234,7 +234,7 @@ def test_offline_sync_reports_partial_results_and_cross_tenant_isolation(auth, o
     assert [item["status"] for item in response.data["results"]] == ["accepted", "rejected"]
 
     _, _, other = onboard("Globex", "globex", "owner@globex.test")
-    assert all(e["person"] != person_id for e in other.get("/api/attendance/events/").data)
+    assert all(str(e["person"]) != person_id for e in other.get("/api/attendance/events/").data)
 
     with connection.cursor() as cursor:
         cursor.execute("SELECT set_config('app.current_tenant', %s, true)", ["00000000-0000-0000-0000-000000000000"])
