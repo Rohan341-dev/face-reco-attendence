@@ -19,7 +19,8 @@ from channels.layers import get_channel_layer
 from django.db import transaction
 from django.db.models import Q
 
-from apps.attendance.models import AttendanceEvent, AttendanceRecord, MissingCheckoutAlert
+from apps.core.audit import log_action
+from apps.attendance.models import AttendanceEvent, AttendanceRecord, CorrectionRecord, MissingCheckoutAlert
 from apps.people.models import Person, has_active_consent
 from apps.schedules.models import Holiday, LeaveRequest, WorkSchedule
 from apps.tenants.models import Organization, OrganizationSettings
@@ -166,6 +167,58 @@ def process_event(org_id: str, data: EventInput) -> tuple[AttendanceEvent, bool]
     recompute_daily_record(org_id, person.id, local_date)
     broadcast(org_id, event, local_date)
     return event, True
+
+
+@transaction.atomic
+def apply_correction(
+    org_id: str,
+    original_event_id: str,
+    *,
+    new_occurred_at: datetime,
+    new_event_type: str,
+    reason: str,
+    corrected_by=None,  # noqa: ANN001
+) -> CorrectionRecord:
+    """Append a correction instead of mutating a verified event.
+
+    The original event stays immutable. Daily records are rebuilt from the
+    ledger with corrections applied as overlays, so the corrected value always
+    wins without destroying the audit trail.
+    """
+    original = AttendanceEvent.objects.filter(pk=original_event_id, organization_id=org_id).first()
+    if original is None:
+        raise AttendanceError("Original attendance event was not found.")
+    if not reason.strip():
+        raise AttendanceError("A correction reason is required.")
+    if new_event_type not in AttendanceEvent.EventType.values:
+        raise AttendanceError("Unknown corrected event type.")
+
+    correction = CorrectionRecord.objects.create(
+        organization_id=org_id,
+        original_event=original,
+        corrected_by=corrected_by if corrected_by and getattr(corrected_by, "is_authenticated", False) else None,
+        reason=reason.strip(),
+        new_occurred_at=new_occurred_at,
+        new_event_type=new_event_type,
+    )
+    org = Organization.objects.get(pk=org_id)
+    old_date = _local_date(original.occurred_at, org)
+    new_date = _local_date(new_occurred_at, org)
+    recompute_daily_record(org_id, original.person_id, old_date)
+    if new_date != old_date:
+        recompute_daily_record(org_id, original.person_id, new_date)
+    log_action(
+        "attendance_corrected",
+        organization_id=org_id,
+        actor=corrected_by,
+        object_repr=f"event:{original.id}",
+        changes={
+            "from": {"occurred_at": original.occurred_at.isoformat(), "event_type": original.event_type},
+            "to": {"occurred_at": new_occurred_at.isoformat(), "event_type": new_event_type},
+            "reason": reason.strip(),
+        },
+    )
+    return correction
 
 
 def broadcast(org_id: str, event: AttendanceEvent, local_date: date) -> None:
