@@ -17,7 +17,7 @@ from zoneinfo import ZoneInfo
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.db import transaction
-from django.utils import timezone
+from django.db.models import Q
 
 from apps.attendance.models import AttendanceEvent, AttendanceRecord, MissingCheckoutAlert
 from apps.people.models import Person, has_active_consent
@@ -69,9 +69,7 @@ def _local_date(occurred_at: datetime, org: Organization) -> date:
 
 
 def validate_eligibility(org_id: str, data: EventInput) -> Person:
-    person = Person.objects.filter(pk=data.person_id, organization_id=org_id, is_active=True).first() if False else Person.objects.filter(
-        pk=data.person_id, organization_id=org_id
-    ).first()
+    person = Person.objects.filter(pk=data.person_id, organization_id=org_id).first()
     if person is None or person.status != Person.Status.ACTIVE:
         raise IneligibleEvent("Person is not active in this organization.")
     settings = OrganizationSettings.objects.filter(organization_id=org_id).first()
@@ -191,18 +189,12 @@ def _active_shift(org_id: str, person, on_date: date) -> tuple[WorkSchedule | No
         organization_id=org_id,
         person_id=person.id,
         effective_from__lte=on_date,
-    ).filter(models.Q(effective_to__isnull=True) | models.Q(effective_to__gte=on_date))
+    ).filter(Q(effective_to__isnull=True) | Q(effective_to__gte=on_date))
     for assignment in schedules.select_related("shift"):
         days = assignment.days_of_week or []
         if not days or on_date.weekday() in [int(d) for d in days]:
             return assignment, assignment.shift
     return None, None
-
-
-# imported late to avoid a module-level circular import with models
-from django.db.models import Q as models_Q  # noqa: E402
-
-models = type("M", (), {"Q": models_Q})
 
 
 def _window_bounds(shift, on_date: date, tz: ZoneInfo) -> tuple[datetime, datetime]:
