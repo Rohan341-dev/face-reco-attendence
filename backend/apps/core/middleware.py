@@ -15,12 +15,13 @@ all ORM queries, including raw SQL.
 from __future__ import annotations
 
 import logging
+from contextlib import contextmanager
 
 from django.db import connection, transaction
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 
-from apps.core.rls import PLATFORM_GUC, TENANT_GUC, USER_GUC
+from apps.core.rls import DEVICE_GUC, PLATFORM_GUC, TENANT_GUC, USER_GUC
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,27 @@ def set_guc(name: str, value: str | None) -> None:
 
 def set_tenant(tenant_id: str | None) -> None:
     set_guc(TENANT_GUC, tenant_id)
+
+
+@contextmanager
+def tenant_context(
+    tenant_id: str | None,
+    *,
+    user_id=None,  # noqa: ANN001
+    device_id=None,  # noqa: ANN001
+    platform_admin: bool = False,
+):
+    """Pin tenant GUCs for work outside an HTTP request (Celery, consumers).
+
+    The atomic block scopes ``SET LOCAL`` to the surrounding unit of work so
+    RLS applies to every query, including raw SQL.
+    """
+    with transaction.atomic():
+        set_guc(USER_GUC, str(user_id) if user_id else None)
+        set_guc(DEVICE_GUC, str(device_id) if device_id else None)
+        set_guc(PLATFORM_GUC, "on" if platform_admin else None)
+        set_tenant(tenant_id)
+        yield
 
 
 class TenantContextMiddleware:

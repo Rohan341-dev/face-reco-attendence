@@ -36,6 +36,13 @@ class Device(BaseModel):
 
 
 class DeviceSyncCursor(BaseModel):
+    """Offline sync watermark for a device.
+
+    ``organization`` is denormalized from the device so the table can be
+    covered by the same org-scoped RLS policy as every other tenant table.
+    """
+
+    organization = models.ForeignKey("tenants.Organization", on_delete=models.CASCADE, related_name="device_sync_cursors")
     device = models.OneToOneField(Device, on_delete=models.CASCADE, related_name="sync_cursor")
     last_synced_at = models.DateTimeField(null=True, blank=True)
     last_event_id = models.CharField(max_length=40, blank=True, default="")

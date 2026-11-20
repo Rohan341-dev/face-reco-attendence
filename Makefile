@@ -1,6 +1,6 @@
 SHELL := /bin/bash
-PY := backend/.venv/bin/python
-PIP := backend/.venv/bin/pip
+PY := $(CURDIR)/backend/.venv/bin/python
+PIP := $(CURDIR)/backend/.venv/bin/pip
 PYVERSION := 3.12
 
 .PHONY: help venv install db-up db-down migrate run-backend run-ai run-web test lint typecheck check codegen seed
@@ -40,7 +40,7 @@ run-backend: ## Run Django dev server
 	cd backend && $(PY) manage.py runserver 0.0.0.0:8000
 
 run-ai: ## Run AI service (uvicorn)
-	cd ai && ../.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+	cd ai && $(PY) -m uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
 
 run-web: ## Run web dashboard (Vite)
 	cd web && npm run dev
