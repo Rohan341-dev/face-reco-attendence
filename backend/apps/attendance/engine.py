@@ -22,7 +22,7 @@ from django.db.models import Q
 from apps.attendance.models import AttendanceEvent, AttendanceRecord, CorrectionRecord, MissingCheckoutAlert
 from apps.core.audit import log_action
 from apps.people.models import Person, has_active_consent
-from apps.schedules.models import Holiday, LeaveRequest, WorkSchedule
+from apps.schedules.models import Holiday, LeaveRequest, Shift, WorkSchedule
 from apps.tenants.models import Organization, OrganizationSettings
 
 logger = logging.getLogger(__name__)
@@ -243,7 +243,7 @@ def broadcast(org_id: str, event: AttendanceEvent, local_date: date) -> None:
         logger.warning("Live feed broadcast failed: %s", exc)
 
 
-def _active_shift(org_id: str, person, on_date: date) -> tuple[WorkSchedule | None, object | None]:
+def _active_shift(org_id: str, person, on_date: date) -> tuple[WorkSchedule | None, Shift | None]:
     schedules = WorkSchedule.objects.filter(
         organization_id=org_id,
         person_id=person.id,

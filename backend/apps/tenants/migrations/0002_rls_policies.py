@@ -8,7 +8,7 @@ from django.db import migrations
 
 from apps.core.rls import rls_sql_for_table
 
-TABLES = (
+TABLES: tuple[tuple[str, dict], ...] = (
     ("tenants_organization", {"column": "id", "force": False}),
     ("tenants_branch", {}),
     ("tenants_department", {}),

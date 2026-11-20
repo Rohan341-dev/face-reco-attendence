@@ -41,7 +41,7 @@ class FaceTrackTokenObtainPairSerializer(TokenObtainPairSerializer):
     org_id = serializers.UUIDField(required=False, allow_null=True)
 
     @classmethod
-    def get_token(cls, user: User):  # noqa: ANN201
+    def get_token(cls, user):  # noqa: ANN001, ANN201
         token = super().get_token(user)
         org_id, role = _membership_claims(user, None)
         if org_id:
@@ -53,7 +53,7 @@ class FaceTrackTokenObtainPairSerializer(TokenObtainPairSerializer):
 
     def validate(self, attrs: dict) -> dict:
         request = self.context.get("request")
-        data = super().validate(attrs)
+        data: dict = super().validate(attrs)
         user = self.user
 
         if user.mfa_enabled:
