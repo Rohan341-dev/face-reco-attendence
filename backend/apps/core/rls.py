@@ -29,18 +29,26 @@ from django.db import connection
 TENANT_GUC = "app.current_tenant"
 USER_GUC = "app.current_user"
 PLATFORM_GUC = "app.platform_admin"
+DEVICE_GUC = "app.current_device"
 
 TENANT_PRED = f"nullif(current_setting('{TENANT_GUC}', true), '')::uuid"
+DEVICE_PRED = f"nullif(current_setting('{DEVICE_GUC}', true), '')::uuid"
 # user ids may be bigint (accounts.User) or uuid (device identities); text
 # comparison keeps the policy valid for either type without casts.
 USER_PRED = f"nullif(current_setting('{USER_GUC}', true), '')"
 PLATFORM_PRED = f"current_setting('{PLATFORM_GUC}', true) = 'on'"
 
 
-def _tenant_using(column: str, user_column: str | None = None) -> str:
+def _tenant_using(
+    column: str,
+    user_column: str | None = None,
+    device_column: str | None = None,
+) -> str:
     parts = [f"{column} = {TENANT_PRED}"]
     if user_column:
         parts.append(f"{user_column}::text = {USER_PRED}")
+    if device_column:
+        parts.append(f"{device_column} = {DEVICE_PRED}")
     parts.append(PLATFORM_PRED)
     return "(" + " OR ".join(parts) + ")"
 
