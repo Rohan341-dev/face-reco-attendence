@@ -56,7 +56,7 @@ lint: ## Ruff + eslint
 	cd web && npm run lint --if-present
 
 typecheck: ## mypy + tsc
-	cd backend && $(PY) -m mypy apps config || true
+	cd backend && $(PY) -m mypy apps config
 	cd web && npm run typecheck --if-present
 
 codegen: ## Generate OpenAPI spec and TS client types
