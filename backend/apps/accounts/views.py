@@ -128,7 +128,7 @@ class MFADisableView(APIView):
 class MeView(APIView):
     permission_classes = [IsAuthenticated]
 
-    @extend_schema responses=UserSerializer)
+    @extend_schema(responses=UserSerializer)
     def get(self, request):  # noqa: ANN001, ANN201
         memberships = request.user.memberships.select_related("organization").filter(is_active=True)
         data = UserSerializer(request.user).data
