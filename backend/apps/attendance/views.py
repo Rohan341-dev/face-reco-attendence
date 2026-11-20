@@ -102,6 +102,7 @@ class RecordListView(ContractAPIView):
     serializer_class = AttendanceRecordSerializer
     permission_classes = [IsTenantMember]
 
+    @extend_schema(responses=AttendanceRecordSerializer(many=True))
     def get(self, request):  # noqa: ANN001, ANN201
         qs = AttendanceRecord.objects.filter(organization_id=request.organization_id).select_related(
             "person", "shift"
@@ -125,6 +126,7 @@ class CorrectionListCreateView(ContractAPIView):
     serializer_class = CorrectionRecordSerializer
     permission_classes = [IsTenantMember]
 
+    @extend_schema(responses=CorrectionRecordSerializer(many=True))
     def get(self, request):  # noqa: ANN001, ANN201
         qs = CorrectionRecord.objects.filter(organization_id=request.organization_id).order_by(
             "-applied_at"
@@ -156,6 +158,7 @@ class MissingCheckoutListView(ContractAPIView):
     serializer_class = MissingCheckoutAlertSerializer
     permission_classes = [IsTenantMember]
 
+    @extend_schema(responses=MissingCheckoutAlertSerializer(many=True))
     def get(self, request):  # noqa: ANN001, ANN201
         qs = MissingCheckoutAlert.objects.filter(
             organization_id=request.organization_id

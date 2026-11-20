@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 
@@ -17,6 +18,7 @@ class ShiftListCreateView(ContractAPIView):
 
     permission_classes = [IsTenantMember]
 
+    @extend_schema(responses=ShiftSerializer(many=True))
     def get(self, request):  # noqa: ANN001, ANN201
         qs = Shift.objects.filter(organization_id=request.organization_id, is_active=True).order_by("start_time", "name")
         return Response(ShiftSerializer(qs, many=True).data)
@@ -65,6 +67,7 @@ class WorkScheduleListCreateView(ContractAPIView):
 
     permission_classes = [IsTenantMember]
 
+    @extend_schema(responses=WorkScheduleSerializer(many=True))
     def get(self, request):  # noqa: ANN001, ANN201
         qs = WorkSchedule.objects.filter(organization_id=request.organization_id)
         person = request.query_params.get("person")
@@ -101,6 +104,7 @@ class HolidayListCreateView(ContractAPIView):
 
     permission_classes = [IsTenantMember]
 
+    @extend_schema(responses=HolidaySerializer(many=True))
     def get(self, request):  # noqa: ANN001, ANN201
         qs = Holiday.objects.filter(organization_id=request.organization_id).order_by("date")
         year = request.query_params.get("year")
@@ -137,6 +141,7 @@ class LeaveRequestListCreateView(ContractAPIView):
 
     permission_classes = [IsTenantMember]
 
+    @extend_schema(responses=LeaveRequestSerializer(many=True))
     def get(self, request):  # noqa: ANN001, ANN201
         qs = LeaveRequest.objects.filter(organization_id=request.organization_id).select_related("person")
         person = request.query_params.get("person")

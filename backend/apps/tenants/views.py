@@ -114,6 +114,7 @@ class BranchListCreateView(ContractAPIView):
 
     permission_classes = [IsTenantMember]
 
+    @extend_schema(responses=BranchSerializer(many=True))
     def get(self, request):  # noqa: ANN001, ANN201
         qs = Branch.objects.filter(organization_id=request.organization_id).order_by("-is_headquarters", "name")
         return Response(BranchSerializer(qs, many=True).data)
@@ -168,6 +169,7 @@ class DepartmentListCreateView(ContractAPIView):
 
     permission_classes = [IsTenantMember]
 
+    @extend_schema(responses=DepartmentSerializer(many=True))
     def get(self, request):  # noqa: ANN001, ANN201
         qs = Department.objects.filter(organization_id=request.organization_id).order_by("name")
         return Response(DepartmentSerializer(qs, many=True).data)
@@ -186,6 +188,7 @@ class MemberListInviteView(ContractAPIView):
 
     permission_classes = [IsTenantMember]
 
+    @extend_schema(responses=MembershipSerializer(many=True))
     def get(self, request):  # noqa: ANN001, ANN201
         qs = (
             Membership.objects.filter(organization_id=request.organization_id, is_active=True)
@@ -272,6 +275,7 @@ class PlatformOrganizationListView(ContractAPIView):
 
     permission_classes = [IsPlatformAdmin]
 
+    @extend_schema(responses=OrganizationSerializer(many=True))
     def get(self, request):  # noqa: ANN001, ANN201
         qs = Organization.objects.all().order_by("-created_at")
         return Response(OrganizationSerializer(qs, many=True).data)

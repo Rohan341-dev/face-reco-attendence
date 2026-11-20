@@ -61,6 +61,7 @@ class DeviceListView(ContractAPIView):
     serializer_class = DeviceSerializer
     permission_classes = [IsTenantMember]
 
+    @extend_schema(responses=DeviceSerializer(many=True))
     def get(self, request):  # noqa: ANN001, ANN201
         qs = Device.objects.filter(organization_id=request.organization_id).select_related("branch")
         active = request.query_params.get("active")

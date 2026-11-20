@@ -27,6 +27,7 @@ class PersonListCreateView(ContractAPIView):
 
     permission_classes = [IsTenantMember]
 
+    @extend_schema(responses=PersonSerializer(many=True))
     def get(self, request):  # noqa: ANN001, ANN201
         qs = Person.objects.filter(organization_id=request.organization_id).select_related(
             "branch", "department"
@@ -141,6 +142,7 @@ class ConsentView(ContractAPIView):
 
     permission_classes = [IsTenantMember]
 
+    @extend_schema(responses=ConsentRecordSerializer(many=True))
     def get(self, request, person_id):  # noqa: ANN001, ANN201
         records = ConsentRecord.objects.filter(
             person_id=person_id, organization_id=request.organization_id
@@ -217,6 +219,7 @@ class BiometricTemplateListView(ContractAPIView):
 
     permission_classes = [IsTenantMember]
 
+    @extend_schema(responses=BiometricTemplateSerializer(many=True))
     def get(self, request):  # noqa: ANN001, ANN201
         from .models import BiometricTemplate
 
