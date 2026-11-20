@@ -273,7 +273,7 @@ def recompute_daily_record(org_id: str, person_id: str, on_date: date) -> Attend
     person = Person.objects.get(pk=person_id, organization_id=org_id)
     assignment, shift = _active_shift(org_id, person, on_date)
 
-    events = list(
+    raw_events = list(
         AttendanceEvent.objects.filter(
             organization_id=org_id,
             person_id=person_id,
@@ -294,18 +294,45 @@ def recompute_daily_record(org_id: str, person_id: str, on_date: date) -> Attend
             occurred_at__gte=midnight_utc,
             occurred_at__lte=midnight_utc + timedelta(hours=12),
         )
-        seen = {e.id for e in events}
-        events = sorted([*events, *(e for e in cross if e.id not in seen)], key=lambda e: e.occurred_at)
+        seen = {e.id for e in raw_events}
+        raw_events = sorted([*raw_events, *(e for e in cross if e.id not in seen)], key=lambda e: e.occurred_at)
 
-    check_ins = [e.occurred_at for e in events if e.event_type == AttendanceEvent.EventType.CHECK_IN]
-    check_outs = [e.occurred_at for e in events if e.event_type == AttendanceEvent.EventType.CHECK_OUT]
+    # Corrections are overlays on the immutable ledger: the original event is
+    # never changed, but the corrected value is what the daily record uses.
+    corrections = {
+        str(c.original_event_id): c
+        for c in CorrectionRecord.objects.filter(
+            organization_id=org_id, original_event__person_id=person_id
+        ).select_related("original_event")
+    }
+    effective: list[tuple[datetime, str, str | None]] = []
+    for event in raw_events:
+        correction = corrections.pop(str(event.id), None)
+        effective.append(
+            (correction.new_occurred_at, correction.new_event_type, event.branch_id)
+            if correction
+            else (event.occurred_at, event.event_type, event.branch_id)
+        )
+    for correction in corrections.values():
+        if _local_date(correction.new_occurred_at, org) == on_date:
+            effective.append(
+                (
+                    correction.new_occurred_at,
+                    correction.new_event_type,
+                    correction.original_event.branch_id,
+                )
+            )
+    effective.sort(key=lambda item: item[0])
+
+    check_ins = [at for at, kind, _ in effective if kind == AttendanceEvent.EventType.CHECK_IN]
+    check_outs = [at for at, kind, _ in effective if kind == AttendanceEvent.EventType.CHECK_OUT]
     breaks: list[tuple[datetime, datetime]] = []
     pending_break = None
-    for event in events:
-        if event.event_type == AttendanceEvent.EventType.BREAK_START:
-            pending_break = event.occurred_at
-        elif event.event_type == AttendanceEvent.EventType.BREAK_END and pending_break:
-            breaks.append((pending_break, event.occurred_at))
+    for occurred_at, kind, _ in effective:
+        if kind == AttendanceEvent.EventType.BREAK_START:
+            pending_break = occurred_at
+        elif kind == AttendanceEvent.EventType.BREAK_END and pending_break:
+            breaks.append((pending_break, occurred_at))
             pending_break = None
 
     first_check_in = min(check_ins) if check_ins else None
@@ -338,10 +365,10 @@ def recompute_daily_record(org_id: str, person_id: str, on_date: date) -> Attend
     if on_leave:
         status = AttendanceRecord.DayStatus.ON_LEAVE
         flags["on_leave"] = True
-    elif holiday and not holiday.is_working_day and not events:
+    elif holiday and not holiday.is_working_day and not effective:
         status = AttendanceRecord.DayStatus.HOLIDAY
         flags["holiday"] = holiday.name
-    elif not events:
+    elif not effective:
         status = AttendanceRecord.DayStatus.ABSENT
     elif late_minutes and not early_minutes:
         status = AttendanceRecord.DayStatus.LATE
@@ -366,7 +393,7 @@ def recompute_daily_record(org_id: str, person_id: str, on_date: date) -> Attend
         person_id=person_id,
         date=on_date,
         defaults={
-            "branch_id": events[0].branch_id if events else None,
+            "branch_id": effective[0][2] if effective else None,
             "shift": shift,
             "first_check_in": first_check_in,
             "last_check_out": last_check_out,
