@@ -97,32 +97,6 @@ class EventView(ContractAPIView):
         )
 
 
-class EventListView(ContractAPIView):
-    serializer_class = AttendanceEventSerializer
-    permission_classes = [IsTenantMember]
-
-    def get(self, request):  # noqa: ANN001, ANN201
-        qs = AttendanceEvent.objects.filter(organization_id=request.organization_id).select_related(
-            "person", "branch"
-        )
-        for param, field in (
-            ("person", "person_id"),
-            ("event_type", "event_type"),
-            ("verification_status", "verification_status"),
-            ("source", "source"),
-        ):
-            value = request.query_params.get(param)
-            if value:
-                qs = qs.filter(**{field: value})
-        date_from = request.query_params.get("date_from")
-        date_to = request.query_params.get("date_to")
-        if date_from:
-            qs = qs.filter(occurred_at__date__gte=date_from)
-        if date_to:
-            qs = qs.filter(occurred_at__date__lte=date_to)
-        return Response(AttendanceEventSerializer(qs.order_by("-occurred_at")[:200], many=True).data)
-
-
 class RecordListView(ContractAPIView):
     serializer_class = AttendanceRecordSerializer
     permission_classes = [IsTenantMember]
