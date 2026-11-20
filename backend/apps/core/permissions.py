@@ -51,6 +51,21 @@ class IsTenantAdmin(IsTenantMember):
         ).exists()
 
 
+class IsActiveDevice(BasePermission):
+    """Requires a registered, active device principal (device token auth)."""
+
+    message = "An active registered device is required."
+
+    def has_permission(self, request, view):
+        user = request.user
+        return bool(
+            user
+            and user.is_authenticated
+            and getattr(user, "is_device", False)
+            and getattr(request, "organization_id", None)
+        )
+
+
 class IsPlatformAdmin(BasePermission):
     message = "Platform administrator required."
 

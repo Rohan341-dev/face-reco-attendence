@@ -83,20 +83,48 @@ class TenantContextMiddleware:
 
     def _authenticate(self, request):  # noqa: ANN001
         header = self.jwt_auth.get_header(request)
-        if not header:
-            return None, {}
-        try:
-            raw = self.jwt_auth.get_raw_token(header)
-            token = self.jwt_auth.get_validated_token(raw)
-            user = self.jwt_auth.get_user(token)
-            return user, dict(token.payload)
-        except (InvalidToken, TokenError):
-            return None, {}
+        if header:
+            try:
+                raw = self.jwt_auth.get_raw_token(header)
+                token = self.jwt_auth.get_validated_token(raw)
+                user = self.jwt_auth.get_user(token)
+                return user, dict(token.payload)
+            except (InvalidToken, TokenError):
+                pass
+
+        # Device tokens are signed with the same secret but are not user tokens.
+        parts = request.META.get("HTTP_AUTHORIZATION", "").split()
+        if len(parts) == 2 and parts[0] == "Device":
+            from apps.devices.authentication import DevicePrincipal
+            from apps.devices.models import Device
+            from apps.devices.tokens import decode_device_token
+
+            payload = decode_device_token(parts[1])
+            if payload:
+                # Pin the tenant before querying the RLS-protected device table.
+                set_tenant(payload["org_id"])
+                device = Device.objects.filter(
+                    pk=payload["device_id"], organization_id=payload["org_id"], is_active=True
+                ).first()
+                if device:
+                    return DevicePrincipal(device), payload
+        return None, {}
 
     def _resolve_org(self, request, user, claims):  # noqa: ANN001, ANN003
         org_id = claims.get("org_id") or request.headers.get("X-Organization-ID")
         if org_id is None or user is None:
             return None
+
+        if claims.get("device_id"):
+            from apps.devices.models import Device
+
+            return (
+                org_id
+                if Device.objects.filter(
+                    pk=claims["device_id"], organization_id=org_id, is_active=True
+                ).exists()
+                else None
+            )
 
         from apps.tenants.models import Membership  # local import to avoid app-load cycles
 
