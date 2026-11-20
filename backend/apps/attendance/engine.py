@@ -157,6 +157,12 @@ def process_event(org_id: str, data: EventInput) -> tuple[AttendanceEvent, bool]
 
     org = Organization.objects.get(pk=org_id)
     local_date = _local_date(event.occurred_at, org)
+    # Overnight shifts belong to the date the shift started.
+    _, shift = _active_shift(org_id, person, local_date)
+    if shift and shift.is_overnight:
+        local_time = event.occurred_at.astimezone(_org_timezone(org)).time()
+        if local_time < shift.end_time:
+            local_date -= timedelta(days=1)
     recompute_daily_record(org_id, person.id, local_date)
     broadcast(org_id, event, local_date)
     return event, True
@@ -228,11 +234,15 @@ def recompute_daily_record(org_id: str, person_id: str, on_date: date) -> Attend
         cross = AttendanceEvent.objects.filter(
             organization_id=org_id,
             person_id=person_id,
-            event_type=AttendanceEvent.EventType.CHECK_IN,
-            occurred_at__gte=midnight_utc - timedelta(hours=12),
-            occurred_at__lt=midnight_utc,
+            event_type__in=[
+                AttendanceEvent.EventType.CHECK_IN,
+                AttendanceEvent.EventType.CHECK_OUT,
+            ],
+            occurred_at__gte=midnight_utc,
+            occurred_at__lte=midnight_utc + timedelta(hours=12),
         )
-        events = sorted([*cross, *events], key=lambda e: e.occurred_at)
+        seen = {e.id for e in events}
+        events = sorted([*events, *(e for e in cross if e.id not in seen)], key=lambda e: e.occurred_at)
 
     check_ins = [e.occurred_at for e in events if e.event_type == AttendanceEvent.EventType.CHECK_IN]
     check_outs = [e.occurred_at for e in events if e.event_type == AttendanceEvent.EventType.CHECK_OUT]
