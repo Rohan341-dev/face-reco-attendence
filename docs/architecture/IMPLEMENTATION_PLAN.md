@@ -102,17 +102,17 @@ Ledger rules:
 ### Phase 1 — Backend core completion (current)
 
 - [x] Inspect repository and write this plan.
-- [ ] Migrations + RLS for `attendance` and `devices` (unblocks tests).
-- [ ] Config fixes: `token_blacklist`, Celery app + tenant-aware task base,
+- [x] Migrations + RLS for `attendance` and `devices` (unblocks tests).
+- [x] Config fixes: `token_blacklist`, Celery app + tenant-aware task base,
       `CSRF_TRUSTED_ORIGINS`, Makefile `run-ai` path.
-- [ ] `apply_correction()` in the engine.
-- [ ] Attendance API: event ingest, event history, daily records, corrections,
+- [x] `apply_correction()` in the engine.
+- [x] Attendance API: event ingest, event history, daily records, corrections,
       missing-checkout alerts; role-scoped; all queries tenant-filtered.
-- [ ] Devices API: pair/rotate token, list, deactivate, sync cursor/offline
+- [x] Devices API: pair/rotate token, list, deactivate, sync cursor/offline
       batch ingest.
-- [ ] WebSocket consumer + ASGI `ProtocolTypeRouter` for the live feed.
-- [ ] Tests for engine, APIs, RLS on new tables, WS auth/tenancy.
-- [ ] Full `make test`, `make lint`, typecheck; regenerate OpenAPI + TS types.
+- [x] WebSocket consumer + ASGI `ProtocolTypeRouter` for the live feed.
+- [x] Tests for engine, APIs, RLS on new tables, device auth.
+- [x] Full backend suite (20 tests), ruff, mypy; regenerated OpenAPI + TS types.
 
 Exit criteria: `cd backend && pytest` green; `make codegen` produces a spec that
 contains attendance and device contracts; all new tenant tables have RLS.

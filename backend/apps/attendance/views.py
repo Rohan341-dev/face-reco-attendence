@@ -48,6 +48,7 @@ class EventView(ContractAPIView):
     serializer_class = AttendanceEventSerializer
     permission_classes = CHANNEL_PERMISSIONS
 
+    @extend_schema(responses=AttendanceEventSerializer(many=True))
     def get(self, request):  # noqa: ANN001, ANN201
         qs = AttendanceEvent.objects.filter(organization_id=request.organization_id).select_related(
             "person", "branch"
