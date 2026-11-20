@@ -31,14 +31,16 @@ USER_GUC = "app.current_user"
 PLATFORM_GUC = "app.platform_admin"
 
 TENANT_PRED = f"nullif(current_setting('{TENANT_GUC}', true), '')::uuid"
-USER_PRED = f"nullif(current_setting('{USER_GUC}', true), '')::uuid"
+# user ids may be bigint (accounts.User) or uuid (device identities); text
+# comparison keeps the policy valid for either type without casts.
+USER_PRED = f"nullif(current_setting('{USER_GUC}', true), '')"
 PLATFORM_PRED = f"current_setting('{PLATFORM_GUC}', true) = 'on'"
 
 
 def _tenant_using(column: str, user_column: str | None = None) -> str:
     parts = [f"{column} = {TENANT_PRED}"]
     if user_column:
-        parts.append(f"{user_column} = {USER_PRED}")
+        parts.append(f"{user_column}::text = {USER_PRED}")
     parts.append(PLATFORM_PRED)
     return "(" + " OR ".join(parts) + ")"
 
@@ -55,10 +57,10 @@ def rls_sql_for_table(
     if reverse:
         return f"DROP POLICY IF EXISTS {policy} ON {table}; ALTER TABLE {table} DISABLE ROW LEVEL SECURITY;"
     cond = _tenant_using(column, user_column)
-    force_clause = "FORCE " if force else ""
+    force_clause = "FORCE" if force else "NO FORCE"
     return (
         f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY; "
-        f"ALTER TABLE {table} {force_clause}ROW LEVEL SECURITY; "
+        f"ALTER TABLE {table} {force_clause} ROW LEVEL SECURITY; "
         f"DROP POLICY IF EXISTS {policy} ON {table}; "
         f"CREATE POLICY {policy} ON {table} USING {cond} WITH CHECK {cond};"
     )

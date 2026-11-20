@@ -9,7 +9,7 @@ from django.db import migrations
 from apps.core.rls import rls_sql_for_table
 
 TABLES = (
-    ("tenants_organization", {"force": False}),
+    ("tenants_organization", {"column": "id", "force": False}),
     ("tenants_branch", {}),
     ("tenants_department", {}),
     ("tenants_membership", {"user_column": "user_id"}),

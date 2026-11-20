@@ -1,31 +1,38 @@
 from __future__ import annotations
 
-import qrcode
 import pyotp
+import qrcode
 from django.contrib.auth import logout as django_logout
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from apps.core.api import ContractAPIView
 from apps.core.crypto import decrypt_text
 from apps.core.exceptions import error_response
-from .models import MFADevice, User
+
+from .models import MFADevice
 from .serializers import (
+    AuthTokensSerializer,
     ChangePasswordSerializer,
     FaceTrackTokenObtainPairSerializer,
+    MessageSerializer,
     MFAEnableSerializer,
+    MFASetupResponseSerializer,
     MFASetupSerializer,
+    MFAVerifyResponseSerializer,
     MFAVerifySerializer,
     UserSerializer,
 )
 
 
-class LoginView(APIView):
+class LoginView(ContractAPIView):
+    serializer_class = AuthTokensSerializer
+
     permission_classes = [AllowAny]
     throttle_scope = "anon"
 
@@ -36,7 +43,9 @@ class LoginView(APIView):
         return Response(serializer.validated_data)
 
 
-class RefreshView(APIView):
+class RefreshView(ContractAPIView):
+    serializer_class = AuthTokensSerializer
+
     permission_classes = [AllowAny]
 
     def post(self, request):  # noqa: ANN001, ANN201
@@ -45,7 +54,7 @@ class RefreshView(APIView):
         try:
             serializer = TokenRefreshSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
-        except (InvalidToken, TokenError) as exc:
+        except (InvalidToken, TokenError):
             return error_response("Invalid refresh token.", 401, "invalid_token")
         data = serializer.validated_data
         # propagate org claims from the refreshed access token
@@ -61,7 +70,9 @@ class RefreshView(APIView):
         return Response(data)
 
 
-class MFAVerifyView(APIView):
+class MFAVerifyView(ContractAPIView):
+    serializer_class = MFAVerifyResponseSerializer
+
     permission_classes = [AllowAny]
 
     def post(self, request):  # noqa: ANN001, ANN201
@@ -70,7 +81,9 @@ class MFAVerifyView(APIView):
         return Response(serializer.validated_data)
 
 
-class MFASetupView(APIView):
+class MFASetupView(ContractAPIView):
+    serializer_class = MFASetupResponseSerializer
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request):  # noqa: ANN001, ANN201
@@ -91,7 +104,9 @@ class MFASetupView(APIView):
         return Response(data)
 
 
-class MFAEnableView(APIView):
+class MFAEnableView(ContractAPIView):
+    serializer_class = MessageSerializer
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request):  # noqa: ANN001, ANN201
@@ -99,7 +114,7 @@ class MFAEnableView(APIView):
         serializer.is_valid(raise_exception=True)
         user = request.user
         user.mfa_enabled = True
-        user.save(update_fields=["mfa_enabled", "updated_at"])
+        user.save(update_fields=["mfa_enabled"])
         MFADevice.objects.create(
             user=user, event="enabled",
             ip_address=request.META.get("REMOTE_ADDR"),
@@ -107,7 +122,9 @@ class MFAEnableView(APIView):
         return Response({"mfa_enabled": True})
 
 
-class MFADisableView(APIView):
+class MFADisableView(ContractAPIView):
+    serializer_class = MessageSerializer
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request):  # noqa: ANN001, ANN201
@@ -120,12 +137,14 @@ class MFADisableView(APIView):
             return error_response("Invalid MFA code.", 400, "invalid_code")
         user.mfa_enabled = False
         user.mfa_secret_encrypted = ""
-        user.save(update_fields=["mfa_enabled", "mfa_secret_encrypted", "updated_at"])
+        user.save(update_fields=["mfa_enabled", "mfa_secret_encrypted"])
         MFADevice.objects.create(user=user, event="disabled", ip_address=request.META.get("REMOTE_ADDR"))
         return Response({"mfa_enabled": False})
 
 
-class MeView(APIView):
+class MeView(ContractAPIView):
+    serializer_class = UserSerializer
+
     permission_classes = [IsAuthenticated]
 
     @extend_schema(responses=UserSerializer)
@@ -144,7 +163,9 @@ class MeView(APIView):
         return Response(data)
 
 
-class ChangePasswordView(APIView):
+class ChangePasswordView(ContractAPIView):
+    serializer_class = MessageSerializer
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request):  # noqa: ANN001, ANN201
@@ -152,14 +173,16 @@ class ChangePasswordView(APIView):
         serializer.is_valid(raise_exception=True)
         user = request.user
         user.set_password(serializer.validated_data["new_password"])
-        user.save(update_fields=["password", "updated_at"])
+        user.save(update_fields=["password"])
         # invalidate other sessions
         for token in OutstandingToken.objects.filter(user=user):
             BlacklistedToken.objects.get_or_create(token=token)
         return Response({"detail": "Password changed."})
 
 
-class LogoutView(APIView):
+class LogoutView(ContractAPIView):
+    serializer_class = MessageSerializer
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request):  # noqa: ANN001, ANN201

@@ -6,7 +6,7 @@ from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 
 from apps.accounts.models import MFADevice, User
 from apps.core.crypto import decrypt_text, encrypt_text
@@ -110,13 +110,14 @@ class MFAVerifySerializer(serializers.Serializer):
     code = serializers.CharField(max_length=8)
 
     def validate(self, attrs: dict) -> dict:
+        request = self.context.get("request")
         try:
-            refresh = RefreshToken(attrs["mfa_token"], verify=True)
+            challenge = AccessToken(attrs["mfa_token"], verify=True)
         except (TokenError, InvalidToken) as exc:
             raise serializers.ValidationError({"mfa_token": "Invalid or expired challenge."}) from exc
-        if not refresh.payload.get("mfa_pending"):
+        if not challenge.payload.get("mfa_pending"):
             raise serializers.ValidationError({"mfa_token": "Not an MFA challenge token."})
-        user = User.objects.get(pk=refresh["user_id"])
+        user = User.objects.get(pk=challenge["user_id"])
         if not user.mfa_enabled:
             raise serializers.ValidationError({"mfa_token": "MFA is not enabled on this account."})
         totp = pyotp.TOTP(decrypt_text(user.mfa_secret_encrypted))
@@ -127,7 +128,7 @@ class MFAVerifySerializer(serializers.Serializer):
                 ip_address=FaceTrackTokenObtainPairSerializer._client_ip(request) if request else None,
             )
             raise serializers.ValidationError({"code": "Invalid MFA code."})
-        org_id = refresh.payload.get("org_id")
+        org_id = challenge.payload.get("org_id")
         resolved, role = _membership_claims(user, org_id)
         new_refresh = RefreshToken.for_user(user)
         if resolved:
@@ -157,7 +158,7 @@ class MFASetupSerializer(serializers.Serializer):
             raise serializers.ValidationError("MFA is already enabled; disable it first.")
         secret = pyotp.random_base32()
         user.mfa_secret_encrypted = encrypt_text(secret)
-        user.save(update_fields=["mfa_secret_encrypted", "updated_at"])
+        user.save(update_fields=["mfa_secret_encrypted"])
         attrs.update({
             "secret": secret,
             "otpauth_url": pyotp.totp.TOTP(secret).provisioning_uri(
@@ -178,6 +179,32 @@ class MFAEnableSerializer(serializers.Serializer):
         if not totp.verify(value, valid_window=1):
             raise serializers.ValidationError("Invalid code.")
         return value
+
+
+class AuthTokensSerializer(serializers.Serializer):
+    access = serializers.CharField()
+    refresh = serializers.CharField()
+    org_id = serializers.UUIDField(allow_null=True, required=False)
+    role = serializers.CharField(allow_null=True, required=False)
+
+
+class MFAChallengeSerializer(serializers.Serializer):
+    mfa_required = serializers.BooleanField()
+    mfa_token = serializers.CharField()
+
+
+class MFAVerifyResponseSerializer(AuthTokensSerializer):
+    pass
+
+
+class MFASetupResponseSerializer(serializers.Serializer):
+    secret = serializers.CharField()
+    otpauth_url = serializers.CharField()
+    qr_png_base64 = serializers.CharField()
+
+
+class MessageSerializer(serializers.Serializer):
+    detail = serializers.CharField()
 
 
 class ChangePasswordSerializer(serializers.Serializer):

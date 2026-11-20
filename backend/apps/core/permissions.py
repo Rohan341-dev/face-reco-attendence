@@ -23,6 +23,20 @@ class IsTenantMember(BasePermission):
         ).exists()
 
 
+class IsTenantHR(IsTenantMember):
+    message = "HR role required."
+
+    def has_permission(self, request, view):
+        if not super().has_permission(request, view):
+            return False
+        return Membership.objects.filter(
+            user_id=request.user.id,
+            organization_id=request.organization_id,
+            role__in=[Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.HR],
+            is_active=True,
+        ).exists()
+
+
 class IsTenantAdmin(IsTenantMember):
     message = "Organization admin role required."
 

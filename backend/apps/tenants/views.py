@@ -6,13 +6,14 @@ from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.accounts.serializers import FaceTrackTokenObtainPairSerializer, _membership_claims
+from apps.accounts.serializers import AuthTokensSerializer, _membership_claims
+from apps.core.api import ContractAPIView
 from apps.core.audit import log_action
 from apps.core.middleware import set_tenant
 from apps.core.permissions import IsPlatformAdmin, IsTenantAdmin, IsTenantMember
+
 from .models import Branch, Department, Membership, Organization, OrganizationSettings
 from .serializers import (
     BranchSerializer,
@@ -25,7 +26,9 @@ from .serializers import (
 )
 
 
-class OnboardingView(APIView):
+class OnboardingView(ContractAPIView):
+    serializer_class = AuthTokensSerializer
+
     """Public self-serve registration: owner account + organization."""
 
     permission_classes = [AllowAny]
@@ -68,7 +71,9 @@ class OnboardingView(APIView):
         )
 
 
-class CurrentOrganizationView(APIView):
+class CurrentOrganizationView(ContractAPIView):
+    serializer_class = OrganizationSerializer
+
     permission_classes = [IsTenantMember]
 
     def get(self, request):  # noqa: ANN001, ANN201
@@ -81,7 +86,9 @@ class CurrentOrganizationView(APIView):
         return Response(data)
 
 
-class OrganizationSettingsView(APIView):
+class OrganizationSettingsView(ContractAPIView):
+    serializer_class = OrganizationSettingsSerializer
+
     permission_classes = [IsTenantMember]
 
     def get(self, request):  # noqa: ANN001, ANN201
@@ -102,7 +109,9 @@ class OrganizationSettingsView(APIView):
         return Response(serializer.data)
 
 
-class BranchListCreateView(APIView):
+class BranchListCreateView(ContractAPIView):
+    serializer_class = BranchSerializer
+
     permission_classes = [IsTenantMember]
 
     def get(self, request):  # noqa: ANN001, ANN201
@@ -118,7 +127,9 @@ class BranchListCreateView(APIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
-class BranchDetailView(APIView):
+class BranchDetailView(ContractAPIView):
+    serializer_class = BranchSerializer
+
     permission_classes = [IsTenantMember]
 
     def _get(self, request, pk):  # noqa: ANN001
@@ -152,7 +163,9 @@ class BranchDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class DepartmentListCreateView(APIView):
+class DepartmentListCreateView(ContractAPIView):
+    serializer_class = DepartmentSerializer
+
     permission_classes = [IsTenantMember]
 
     def get(self, request):  # noqa: ANN001, ANN201
@@ -168,7 +181,9 @@ class DepartmentListCreateView(APIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
-class MemberListInviteView(APIView):
+class MemberListInviteView(ContractAPIView):
+    serializer_class = MembershipSerializer
+
     permission_classes = [IsTenantMember]
 
     def get(self, request):  # noqa: ANN001, ANN201
@@ -199,7 +214,9 @@ class MemberListInviteView(APIView):
         return Response(MembershipSerializer(result["membership"]).data, status=status.HTTP_201_CREATED)
 
 
-class MemberDetailView(APIView):
+class MemberDetailView(ContractAPIView):
+    serializer_class = MembershipSerializer
+
     permission_classes = [IsTenantMember]
 
     def _get(self, request, pk):  # noqa: ANN001
@@ -250,7 +267,9 @@ class MemberDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class PlatformOrganizationListView(APIView):
+class PlatformOrganizationListView(ContractAPIView):
+    serializer_class = OrganizationSerializer
+
     permission_classes = [IsPlatformAdmin]
 
     def get(self, request):  # noqa: ANN001, ANN201
@@ -258,7 +277,9 @@ class PlatformOrganizationListView(APIView):
         return Response(OrganizationSerializer(qs, many=True).data)
 
 
-class PlatformOrganizationActionView(APIView):
+class PlatformOrganizationActionView(ContractAPIView):
+    serializer_class = OrganizationSerializer
+
     permission_classes = [IsPlatformAdmin]
 
     def post(self, request, pk):  # noqa: ANN001, ANN201
