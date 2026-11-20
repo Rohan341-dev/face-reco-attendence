@@ -70,6 +70,10 @@ class TenantContextMiddleware:
             set_guc(USER_GUC, str(user.id) if user else None)
             set_guc(PLATFORM_GUC, "on" if (claims.get("platform_admin") and not claims.get("org_id")) else None)
 
+            # Device claims carry the tenant explicitly; pin it before the
+            # RLS-protected membership/device lookup in _resolve_org.
+            if claims.get("device_id") and claims.get("org_id"):
+                set_tenant(claims["org_id"])
             org_id = self._resolve_org(request, user, claims)
             request.organization_id = org_id
             request.device_id = claims.get("device_id")

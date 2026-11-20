@@ -114,7 +114,7 @@ def test_daily_record_work_time_break_and_missing_checkout(auth, onboard):
     assert break_start.status_code == 201 and break_end.status_code == 201
 
     records = client.get("/api/attendance/records/").data
-    record = next(r for r in records if r["person"] == person_id)
+    record = next(r for r in records if str(r["person"]) == person_id)
     assert record["total_break_seconds"] == 1800
     assert record["flags"].get("missing_checkout") is True
 
@@ -127,7 +127,7 @@ def test_daily_record_work_time_break_and_missing_checkout(auth, onboard):
 
     checkout = _event(client, person_id, "check_out", day + timedelta(hours=8), verification_status="verified_manual")
     assert checkout.status_code == 201
-    record = next(r for r in client.get("/api/attendance/records/").data if r["person"] == person_id)
+    record = next(r for r in client.get("/api/attendance/records/").data if str(r["person"]) == person_id)
     assert record["total_work_seconds"] == 7 * 3600
     assert record["status"] == "present"
 
@@ -159,7 +159,7 @@ def test_correction_is_append_only_and_rebuilds_record(auth):
         assert CorrectionRecord.objects.filter(original_event_id=original_id).count() == 1
         assert AuditLog.objects.filter(action="attendance_corrected").exists()
 
-    record = next(r for r in client.get("/api/attendance/records/").data if r["person"] == person_id)
+    record = next(r for r in client.get("/api/attendance/records/").data if str(r["person"]) == person_id)
     assert record["first_check_in"] == corrected_at.isoformat().replace("+00:00", "Z")
 
 
