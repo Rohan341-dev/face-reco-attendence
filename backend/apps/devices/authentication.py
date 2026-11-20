@@ -20,7 +20,9 @@ class DevicePrincipal:
     def __init__(self, device: Device):
         self.device = device
         self.id = device.id
+        self.pk = device.id
         self.organization_id = device.organization_id
+        self.is_active = device.is_active
 
     def __str__(self) -> str:  # pragma: no cover - cosmetic
         return f"device:{self.id}"

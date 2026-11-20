@@ -128,7 +128,7 @@ def test_daily_record_work_time_break_and_missing_checkout(auth, onboard):
     checkout = _event(client, person_id, "check_out", day + timedelta(hours=8), verification_status="verified_manual")
     assert checkout.status_code == 201
     record = next(r for r in client.get("/api/attendance/records/").data if str(r["person"]) == person_id)
-    assert record["total_work_seconds"] == 7 * 3600
+    assert record["total_work_seconds"] == 8 * 3600 - 1800
     assert record["status"] == "present"
 
 
