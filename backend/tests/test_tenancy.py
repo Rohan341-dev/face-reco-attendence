@@ -144,3 +144,22 @@ def test_non_admin_cannot_create_branch(auth):
     )
     # Invited user has unusable password, so login must fail.
     assert login.status_code in (400, 401)
+
+
+@pytest.mark.django_db(transaction=True)
+def test_password_login_carries_org_claim(onboard):
+    """Anonymous login must still resolve memberships hidden by RLS."""
+    payload, tokens, _ = onboard("Claim Co", "claimco", "claim@claimco.test")
+    login = APIClient().post(
+        "/api/auth/login/",
+        {"email": payload["owner_email"], "password": payload["password"]},
+        format="json",
+    )
+    assert login.status_code == 200, login.data
+    assert str(login.data["org_id"]) == str(tokens["org_id"])
+    assert login.data["role"] == "owner"
+
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {login.data['access']}")
+    assert client.get("/api/organizations/current/").status_code == 200
+    assert client.get("/api/people/").status_code == 200
