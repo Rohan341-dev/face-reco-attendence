@@ -165,6 +165,12 @@ FAR/FRR and limitations. ⚠️ (report exists; real evaluation outstanding)
   online/offline states.
 - Both consume generated API types only.
 
+Status: terminal browser kiosk implemented and building (device pairing,
+signed device token, camera preview, person lookup, device-verified events,
+offline queue + sync). Mobile Expo source implemented (auth, self attendance,
+history, offline queue) but its dependencies are not installed here, so its
+build is unverified locally.
+
 ### Phase 5 — Billing, monitoring, deployment
 
 - Subscription plans, entitlements, seat limits enforced server-side in the
