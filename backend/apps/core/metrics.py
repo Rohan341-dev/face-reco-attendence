@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import hmac
 import logging
 import re
 import time
 
+from django.conf import settings
 from django.http import HttpResponse
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 
@@ -48,9 +50,6 @@ class MetricsMiddleware:
 
 def metrics_view(request):  # noqa: ANN001, ANN201
     """Scrape endpoint guarded by a shared secret (configure in Nginx)."""
-    from django.conf import settings
-    import hmac
-
     supplied = request.headers.get("X-Metrics-Token", "")
     if not supplied and request.headers.get("Authorization", "").startswith("Bearer "):
         supplied = request.headers["Authorization"].split(None, 1)[1]
