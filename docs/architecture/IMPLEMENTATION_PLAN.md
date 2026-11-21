@@ -127,8 +127,13 @@ contains attendance and device contracts; all new tenant tables have RLS.
 - shadcn/ui primitives (Radix-based) and accessible components; no fake stats,
   no placeholder buttons.
 
+Status: implemented (login/MFA/onboarding, app shell, dashboard with API-derived
+aggregates, live feed, people/consent, attendance + corrections, devices,
+schedules, settings). `npm run typecheck`, `npm run lint`, `npm test -- --run`
+and `npm run build` all pass.
+
 Exit criteria: `npm run build` + `npm test` green; every visible number
-originates from the API.
+originates from the API. ✅
 
 ### Phase 3 — AI service (independent)
 
@@ -142,8 +147,15 @@ originates from the API.
 - Evaluation harness + report under `docs/ai/evaluation/`. **No accuracy claim
   without a committed report.**
 
+Status: service implemented with a modular pipeline and internal-token auth.
+Default embedding backend is a deterministic non-biometric stub; liveness is an
+explicitly non-certified heuristic. Tests pass (5). The evaluation report
+records that **no real-data evaluation has been performed and no accuracy is
+claimed**; a real dataset, licensed model and PAD integration are still
+required.
+
 Exit criteria: service tests green; report documents dataset, methodology,
-FAR/FRR and limitations.
+FAR/FRR and limitations. ⚠️ (report exists; real evaluation outstanding)
 
 ### Phase 4 — Channel clients
 
