@@ -176,6 +176,13 @@ FAR/FRR and limitations. ⚠️ (report exists; real evaluation outstanding)
 - Seed command (development only, realistic data).
 - CI pipeline running lint/typecheck/tests and schema drift check.
 
+Status: Dockerfiles, nginx TLS config with WebSocket proxy, Prometheus metrics
+endpoint/config, Sentry wiring, realistic dev seed command and module/security
+docs are implemented. **Billing/subscription enforcement, notifications and
+CI/CD are not yet implemented**; the `billing` and `notifications` apps remain
+placeholders and must not be represented as finished features. Backup/restore
+runbook is also outstanding.
+
 ## 6. Quality gates (run after every phase)
 
 ```
