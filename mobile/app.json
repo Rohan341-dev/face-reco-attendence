@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "FaceTrack AI",
+    "slug": "facetrack-ai",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "facetrack",
+    "userInterfaceStyle": "dark",
+    "splash": { "resizeMode": "contain", "backgroundColor": "#080d18" },
+    "assetBundlePatterns": ["**/*"],
+    "ios": { "supportsTablet": true },
+    "android": { "adaptiveIcon": { "backgroundColor": "#080d18" } },
+    "web": { "bundler": "metro" },
+    "extra": {
+      "apiBaseUrl": "http://localhost:8000"
+    }
+  }
+}

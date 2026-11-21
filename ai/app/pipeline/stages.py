@@ -30,7 +30,7 @@ def decode_image(image_b64: str, settings: Settings) -> np.ndarray:
         raise PipelineError("image_too_large", "Image exceeds the configured size limit.", "capture")
     try:
         raw = base64.b64decode(image_b64, validate=True)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise PipelineError("invalid_image", "Image is not valid base64.", "capture") from exc
     array = np.frombuffer(raw, dtype=np.uint8)
     image = cv2.imdecode(array, cv2.IMREAD_COLOR)
@@ -54,7 +54,7 @@ def detect_face(image: np.ndarray, settings: Settings) -> DetectionResult:
                     detector="yunet",
                 )
             return DetectionResult(detected=False, detector="yunet")
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise PipelineError("detector_unavailable", f"YuNet detector failed: {exc}", "detection") from exc
 
     cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
