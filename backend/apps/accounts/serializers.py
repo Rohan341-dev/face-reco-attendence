@@ -24,13 +24,24 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 def _membership_claims(user: User, org_id: str | None) -> tuple[str | None, str | None]:
-    qs = Membership.objects.filter(user=user, is_active=True).select_related("organization")
-    if org_id:
-        qs = qs.filter(organization_id=org_id)
-    membership = qs.order_by("created_at").first()
-    if membership is None:
-        return None, None
-    return str(membership.organization_id), membership.role
+    # Login/onboarding requests are anonymous, so the middleware has no user
+    # GUC set and RLS hides memberships. Pin the user identity for this lookup,
+    # then restore the previous value so callers keep their tenant scope.
+    from apps.core.middleware import get_guc, set_guc
+    from apps.core.rls import USER_GUC
+
+    previous = get_guc(USER_GUC)
+    set_guc(USER_GUC, str(user.id))
+    try:
+        qs = Membership.objects.filter(user=user, is_active=True).select_related("organization")
+        if org_id:
+            qs = qs.filter(organization_id=org_id)
+        membership = qs.order_by("created_at").first()
+        if membership is None:
+            return None, None
+        return str(membership.organization_id), membership.role
+    finally:
+        set_guc(USER_GUC, previous)
 
 
 class FaceTrackTokenObtainPairSerializer(TokenObtainPairSerializer):

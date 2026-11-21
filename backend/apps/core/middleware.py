@@ -31,6 +31,12 @@ def set_guc(name: str, value: str | None) -> None:
         cursor.execute("SELECT set_config(%s, %s, true)", [name, value or ""])
 
 
+def get_guc(name: str) -> str | None:
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT current_setting(%s, true)", [name])
+        return cursor.fetchone()[0] or None
+
+
 def set_tenant(tenant_id: str | None) -> None:
     set_guc(TENANT_GUC, tenant_id)
 
